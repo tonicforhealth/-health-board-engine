@@ -1,0 +1,40 @@
+<dataset>
+    <table name="products">
+        <column>id</column>
+        <column>name</column>
+        <row>
+            <value>1</value>
+            <value>RD-3243</value>
+        </row>
+        <row>
+            <value>2</value>
+            <value>PS-1224</value>
+        </row>
+    </table>
+
+    <table name="users">
+        <column>id</column>
+        <column>name</column>
+        <row>
+            <value>1</value>
+            <value>Salvador	Reeves</value>
+        </row>
+        <row>
+            <value>2</value>
+            <value>Lauren	Nunez</value>
+        </row>
+    </table>
+
+    <table name="articles">
+        <column>id</column>
+        <column>name</column>
+        <row>
+            <value>1</value>
+            <value>Data Type</value>
+        </row>
+        <row>
+            <value>2</value>
+            <value>CONSTRAINTS</value>
+        </row>
+    </table>
+</dataset>

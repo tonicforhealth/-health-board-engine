@@ -1,0 +1,21 @@
+#!/usr/bin/env php
+<?php
+set_time_limit(0);
+
+use TonicHealthCheck\Bootstrap\Kernel;
+use Symfony\Component\Console\Application;
+use TonicHealthCheck\Command\HealthCheck;
+
+define('AUTOLOAD_PATH', __DIR__.'/../vendor/autoload.php');
+
+// include the composer autoloader
+require_once AUTOLOAD_PATH;
+
+$kernel = new Kernel('prod');
+$kernel->boot();
+
+$kernel->getContainer()['lang'];
+
+$app = new Application();
+$app->add(new HealthCheck($kernel->getContainer()));
+$app->run();
