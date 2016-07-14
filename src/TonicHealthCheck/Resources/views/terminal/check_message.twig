@@ -1,0 +1,2 @@
+{% import "check_macro.twig" as check_macro %}
+{{ 'now'|date('Y-m-d H:i:s') }} {% if ident %}{{ ident }}:{% endif %}{{ message }} {{ check_macro.check_status(status) }}
