@@ -164,7 +164,14 @@ return [
     'checks_list' => [
         'http_check' => [
             'local' => [
-                'http-code-check' => true,
+                'http-code-check' => [
+                    'incident_options' => [
+                        'type' => 'urgent',
+                        'occurrence' => 3,
+                        'occurrence_period' => 100,
+                        'occurrence_info_type' => 'minor'
+                    ],
+                ],
                 'http-performance-degradation-check' => true,
             ],
         ],

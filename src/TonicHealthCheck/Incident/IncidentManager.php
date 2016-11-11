@@ -6,6 +6,9 @@ use Doctrine\ORM\EntityManager;
 use TonicHealthCheck\Check\CheckException;
 use TonicHealthCheck\Check\CheckInterface;
 use TonicHealthCheck\Entity\Incident;
+use TonicHealthCheck\Entity\IncidentStat;
+use TonicHealthCheck\Incident\IncidentTypeResolver\IncidentTypeResolver;
+use TonicHealthCheck\Incident\IncidentTypeResolver\IncidentTypeResolverInterface;
 
 /**
  * Class IncidentManager.
@@ -18,22 +21,22 @@ class IncidentManager
     protected $doctrine;
 
     /**
-     * @var ChecksIncidentTypeMapperInterface
+     * @var IncidentTypeResolver
      */
-    private $checksIncidentTypeMapper;
+    private $incidentTypeResolver;
 
     /**
      * IncidentHandler constructor.
      *
-     * @param EntityManager                     $doctrine
-     * @param ChecksIncidentTypeMapperInterface $checksITypeMapper
+     * @param EntityManager                 $doctrine
+     * @param IncidentTypeResolverInterface $checksITypeMapper
      */
     public function __construct(
         EntityManager $doctrine,
-        ChecksIncidentTypeMapperInterface $checksITypeMapper
+        IncidentTypeResolverInterface $checksITypeMapper
     ) {
         $this->setDoctrine($doctrine);
-        $this->setChecksIncidentTypeMapper($checksITypeMapper);
+        $this->setIncidentTypeResolver($checksITypeMapper);
     }
 
     /**
@@ -42,25 +45,28 @@ class IncidentManager
      */
     public function fireIncident(CheckInterface $checkObj, CheckException $exception)
     {
-        $ident = $checkObj->getIndent();
-        $name = $checkObj->getCheckComponent().":".$checkObj->getCheckNode();
+        $incidentIdent = $checkObj->getIndent();
+        $incidentName = $checkObj->getCheckComponent().':'.$checkObj->getCheckNode();
+        $incidentMessage = $exception->getMessage();
+        $incidentStatus = $exception->getCode();
         /** @var IncidentInterface $incident */
-
         $incident = $this->getDoctrine()
-            ->getRepository('TonicHealthCheck\Entity\Incident')
-            ->findOneBy(['ident' => $ident]);
+            ->getRepository(Incident::class)
+            ->findNotResolved($incidentIdent);
+
         if (!$incident) {
-            $incident = new Incident($ident, $name);
-            $incident->setMessage($exception->getMessage());
-            $incident->setType($this->getChecksIncidentTypeMapper()->getChecksIncidentType($checkObj->getIndent()));
+            $incident = new Incident($incidentIdent, $incidentName);
+            $incident->setMessage($incidentMessage);
+
             $this->getDoctrine()->persist($incident);
             $this->getDoctrine()->flush();
         }
 
-        $incident->setStatus($exception->getCode());
+        $incident->setStatus($incidentStatus);
 
-        $this->getDoctrine()->persist($incident);
-        $this->getDoctrine()->flush();
+        $incidentStat = $this->registerIncidentStat($incident);
+
+        $this->resolveIncidentType($incident, $incidentStat);
     }
 
     /**
@@ -71,13 +77,14 @@ class IncidentManager
         $ident = $checkObj->getIndent();
 
         $incident = $this->getDoctrine()
-            ->getRepository('TonicHealthCheck\Entity\Incident')
-            ->findOneBy(['ident' => $ident]);
+            ->getRepository(Incident::class)
+            ->findNotResolved($ident);
+
         if ($incident && $incident instanceof Incident) {
             $incident->setStatus(IncidentInterface::STATUS_OK);
+            $incident->setResolved(true);
+            $this->registerIncidentStat($incident);
             $this->getDoctrine()->persist($incident);
-            $this->getDoctrine()->flush();
-            $this->getDoctrine()->remove($incident);
             $this->getDoctrine()->flush();
         }
     }
@@ -91,11 +98,11 @@ class IncidentManager
     }
 
     /**
-     * @return ChecksIncidentTypeMapperInterface
+     * @return IncidentTypeResolverInterface
      */
-    public function getChecksIncidentTypeMapper()
+    public function getIncidentTypeResolver()
     {
-        return $this->checksIncidentTypeMapper;
+        return $this->incidentTypeResolver;
     }
 
     /**
@@ -107,10 +114,43 @@ class IncidentManager
     }
 
     /**
-     * @param ChecksIncidentTypeMapperInterface $checksITypeMapper
+     * @param IncidentTypeResolverInterface $incidentTypeResolver
      */
-    protected function setChecksIncidentTypeMapper(ChecksIncidentTypeMapperInterface $checksITypeMapper)
+    protected function setIncidentTypeResolver(IncidentTypeResolverInterface $incidentTypeResolver)
     {
-        $this->checksIncidentTypeMapper = $checksITypeMapper;
+        $this->incidentTypeResolver = $incidentTypeResolver;
+    }
+
+    /**
+     * @param Incident $incident
+     *
+     * @return IncidentStat
+     */
+    protected function registerIncidentStat($incident)
+    {
+        $incidentStat = new IncidentStat($incident->getIdent());
+        $incidentStat->setIncident($incident);
+        $incidentStat->setType($incident->getType());
+        $incidentStat->setMessage($incident->getMessage());
+        $incidentStat->setStatus($incident->getStatus());
+        $incidentStat->setResolved($incident->isResolved());
+        $this->getDoctrine()->persist($incidentStat);
+        $this->getDoctrine()->flush();
+
+        return $incidentStat;
+    }
+
+    /**
+     * @param Incident     $incident
+     * @param IncidentStat $incidentStat
+     */
+    protected function resolveIncidentType(Incident $incident, IncidentStat $incidentStat)
+    {
+        $incidentType = $this->getIncidentTypeResolver()->resolveChecksIncidentType($incident->getIdent());
+        $incident->setType($incidentType);
+        $incidentStat->setType($incidentType);
+        $this->getDoctrine()->persist($incident);
+        $this->getDoctrine()->persist($incidentStat);
+        $this->getDoctrine()->flush();
     }
 }

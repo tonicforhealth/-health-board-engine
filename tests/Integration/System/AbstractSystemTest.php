@@ -170,7 +170,7 @@ abstract class AbstractSystemTest extends PHPUnit_Framework_TestCase
             ->getMockBuilder(IncidentManager::class)
             ->setConstructorArgs([
                 $entityManager,
-                $this->getContainer()['incident.checks_type_mapper'],
+                $this->getContainer()['incident.checks_type_resolver'],
 
             ])
             ->enableProxyingToOriginalMethods()

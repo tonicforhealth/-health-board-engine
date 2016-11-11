@@ -2,29 +2,33 @@
 
 namespace TonicHealthCheck\Entity;
 
+use DateTime;
+use DateTimeInterface;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping\Column;
 use Doctrine\ORM\Mapping\Entity;
 use Doctrine\ORM\Mapping\GeneratedValue;
 use Doctrine\ORM\Mapping\HasLifecycleCallbacks;
 use Doctrine\ORM\Mapping\Id;
 use Doctrine\ORM\Mapping\Table;
-use JMS\Serializer\Annotation\Exclude;
-use JMS\Serializer\Annotation\ExclusionPolicy;
-use JMS\Serializer\Annotation\Expose;
-use JMS\Serializer\Annotation\Type;
 use SplObserver;
 use TonicHealthCheck\Incident\IncidentInterface;
 
 /**
- * TonicHealthCheck\Entity\Incident;
+ * TonicHealthCheck\Entity\Incident;.
  *
  * @ExclusionPolicy("none")
  * @HasLifecycleCallbacks
- * @Entity(repositoryClass="ComponentRepository")
- * @Table(name="incident")
+ * @Entity(repositoryClass="IncidentRepository")
+ * @Table(name="incident", indexes={@Index(name="search_incident_1", columns={"ident", "resolved"})})
  */
 class Incident implements IncidentInterface
 {
+    /**
+     * @OneToMany(targetEntity="IncidentStat", mappedBy="incident", cascade={"remove"})
+     */
+    private $incidentStats;
+
     /**
      * @var array
      * @Exclude
@@ -37,21 +41,21 @@ class Incident implements IncidentInterface
      * @Column(type="integer")
      * @GeneratedValue(strategy="IDENTITY")
      */
-    private $id = null;
+    private $id;
 
     /**
      * @Column(type="integer", nullable=true)
      */
-    private $external_id = null;
+    private $external_id;
 
     /**
-     * @Column(type="string", length=128, unique=true)
+     * @Column(type="string", length=128)
      * @Expose
      */
     private $ident;
 
     /**
-     * Type of the problems (urgent, warning, minor)
+     * Type of the problems (urgent, warning, minor).
      *
      * @Column(type="string", length=32, name="`type`", nullable=true)
      * @Expose
@@ -78,7 +82,24 @@ class Incident implements IncidentInterface
      * @Expose
      * @Type("integer")
      */
-    private $status = null;
+    private $status;
+
+    /**
+     * @var DateTimeInterface
+     * @Column(type="datetime", name="create_at")
+     */
+    private $createAt;
+
+    /**
+     * @var DateTimeInterface
+     * @Column(type="datetime", name="update_at", nullable=true)
+     */
+    private $updateAt;
+
+    /**
+     * @Column(type="boolean")
+     */
+    private $resolved = false;
 
     /**
      * Incident constructor.
@@ -93,15 +114,28 @@ class Incident implements IncidentInterface
     }
 
     /**
-     * Attach an SplObserver
+     * @param IncidentStat $incidentStat
+     */
+    public function addIncidentStats(IncidentStat $incidentStat)
+    {
+        $this->incidentStats[] = $incidentStat;
+    }
+    /**
+     * @return Collection
+     */
+    public function getIncidentStats()
+    {
+        return $this->incidentStats;
+    }
+
+    /**
+     * Attach an SplObserver.
      *
      * @link http://php.net/manual/en/splsubject.attach.php
      *
      * @param SplObserver $observer <p>
      *                              The <b>SplObserver</b> to attach.
      *                              </p>
-     *
-     * @return void
      *
      * @since 5.1.0
      */
@@ -111,15 +145,13 @@ class Incident implements IncidentInterface
     }
 
     /**
-     * Detach an observer
+     * Detach an observer.
      *
      * @link http://php.net/manual/en/splsubject.detach.php
      *
      * @param SplObserver $observer <p>
      *                              The <b>SplObserver</b> to detach.
      *                              </p>
-     *
-     * @return void
      *
      * @since 5.1.0
      */
@@ -133,12 +165,9 @@ class Incident implements IncidentInterface
     }
 
     /**
-     * Notify an observer
+     * Notify an observer.
      *
      * @link http://php.net/manual/en/splsubject.notify.php
-     *
-     * @return void
-     *
      * @since 5.1.0
      */
     public function notify()
@@ -150,7 +179,7 @@ class Incident implements IncidentInterface
     }
 
     /**
-     * Set id
+     * Set id.
      *
      * @param int $id
      *
@@ -164,7 +193,7 @@ class Incident implements IncidentInterface
     }
 
     /**
-     * Get id
+     * Get id.
      *
      * @return int
      */
@@ -174,7 +203,7 @@ class Incident implements IncidentInterface
     }
 
     /**
-     * Set ident
+     * Set ident.
      *
      * @param string $ident
      *
@@ -188,7 +217,7 @@ class Incident implements IncidentInterface
     }
 
     /**
-     * Get ident
+     * Get ident.
      *
      * @return string
      */
@@ -198,7 +227,7 @@ class Incident implements IncidentInterface
     }
 
     /**
-     * Get type
+     * Get type.
      *
      * @return string
      */
@@ -208,7 +237,7 @@ class Incident implements IncidentInterface
     }
 
     /**
-     * Set type
+     * Set type.
      *
      * @param string $type
      */
@@ -218,7 +247,7 @@ class Incident implements IncidentInterface
     }
 
     /**
-     * Set name
+     * Set name.
      *
      * @param string $name
      *
@@ -232,7 +261,7 @@ class Incident implements IncidentInterface
     }
 
     /**
-     * Get name
+     * Get name.
      *
      * @return string
      */
@@ -242,7 +271,7 @@ class Incident implements IncidentInterface
     }
 
     /**
-     * Set message
+     * Set message.
      *
      * @param string $message
      *
@@ -256,7 +285,7 @@ class Incident implements IncidentInterface
     }
 
     /**
-     * Get message
+     * Get message.
      *
      * @return string
      */
@@ -266,7 +295,7 @@ class Incident implements IncidentInterface
     }
 
     /**
-     * Set status
+     * Set status.
      *
      * @param int $status
      *
@@ -280,7 +309,7 @@ class Incident implements IncidentInterface
     }
 
     /**
-     * Get status
+     * Get status.
      *
      * @return int
      */
@@ -290,7 +319,7 @@ class Incident implements IncidentInterface
     }
 
     /**
-     * Set externalId
+     * Set externalId.
      *
      * @param int $externalId
      *
@@ -304,12 +333,60 @@ class Incident implements IncidentInterface
     }
 
     /**
-     * Get externalId
+     * Get externalId.
      *
      * @return int
      */
     public function getExternalId()
     {
         return $this->external_id;
+    }
+
+    /**
+     * @return DateTimeInterface
+     */
+    public function getCreateAt()
+    {
+        return $this->createAt;
+    }
+
+    /**
+     * @return DateTimeInterface
+     */
+    public function getUpdateAt()
+    {
+        return $this->updateAt;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isResolved()
+    {
+        return $this->resolved;
+    }
+
+    /**
+     * @param bool $resolved
+     */
+    public function setResolved($resolved)
+    {
+        $this->resolved = $resolved;
+    }
+
+    /**
+     * @PrePersist
+     */
+    public function doStuffOnPrePersist()
+    {
+        $this->createAt = new DateTime();
+    }
+
+    /**
+     * @PreUpdate
+     */
+    public function doStuffOnPreUpdate()
+    {
+        $this->updateAt = new DateTime();
     }
 }

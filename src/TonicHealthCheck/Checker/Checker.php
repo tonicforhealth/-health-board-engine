@@ -8,6 +8,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 use TonicHealthCheck\Check\CheckInterface;
 use TonicHealthCheck\Check\CheckResult;
 use TonicHealthCheck\Component\ComponentManager;
+use TonicHealthCheck\Entity\Component;
+use TonicHealthCheck\Incident\IncidentInterface;
 use TonicHealthCheck\Incident\IncidentManager;
 use TonicHealthCheck\Maintenance\scheduledMaintenance;
 use Twig_Environment;
@@ -17,6 +19,7 @@ use Twig_Environment;
  */
 class Checker
 {
+    protected $components = [];
     /**
      * @var ChecksList
      */
@@ -74,33 +77,47 @@ class Checker
         /* @var CheckInterface $checkI */
         $checkResult = null;
         $ident = null;
+
         if (!$this->getScheduledMaintenance()->isNowMaintenanceOn()) {
             foreach ($this->getChecksList() as $checkI) {
                 $this->renderComponentCheckStart($output, $checkI);
                 $checkResult = $this->performCheck($output, $checkI);
 
                 if ($checkResult instanceof CheckResult) {
-                    $component = $this->getComponentManager()->getComponentByName($checkI->getCheckComponent());
-                    $component->setStatus($checkResult->getStatus());
-                    try {
-                        $componentData = $this->getComponentManager()->getComponentRes($component->getId());
-                        if (null !== $componentData && empty($componentData->error) && !empty($componentData->data)) {
-                            $this->getComponentManager()->updateComponentRes($component);
-                        } else {
-                            $componentRes = $this->getComponentManager()->createComponentRes($component);
-                            $component->setId($componentRes->id);
-                        }
-                        $this->getComponentManager()->saveComponent($component);
-                    } catch (\Exception $e) {
-                        $this->renderCheckError(
-                            $output,
-                            'check_sync_error.twig',
-                            [
-                                'error' => $e->getMessage(),
-                            ],
-                            OutputInterface::VERBOSITY_NORMAL
-                        );
+                    $componentName = $checkI->getCheckComponent();
+                    if (!isset($this->components[$componentName])) {
+                        $this->components[$componentName] = $this->getComponentManager()->getComponentByName($componentName);
+                        $this->components[$componentName]->setStatus(IncidentInterface::STATUS_OK);
                     }
+                    /** @var Component $component */
+                    $component = $this->components[$componentName];
+                    if ($component->getStatus() == IncidentInterface::STATUS_OK) {
+                        $component->setStatus($checkResult->getStatus());
+                    }
+                }
+            }
+
+            foreach ($this->components as $component) {
+                try {
+                    $componentData = $this->getComponentManager()->getComponentRes($component->getId());
+                    if (null !== $componentData
+                        && empty($componentData->error)
+                        && !empty($componentData->data)) {
+                        $this->getComponentManager()->updateComponentRes($component);
+                    } else {
+                        $componentRes = $this->getComponentManager()->createComponentRes($component);
+                        $component->setId($componentRes->id);
+                    }
+                    $this->getComponentManager()->saveComponent($component);
+                } catch (\Exception $e) {
+                    $this->renderCheckError(
+                        $output,
+                        'check_sync_error.twig',
+                        [
+                            'error' => $e->getMessage(),
+                        ],
+                        OutputInterface::VERBOSITY_NORMAL
+                    );
                 }
             }
         }

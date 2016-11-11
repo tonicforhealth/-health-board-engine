@@ -55,6 +55,9 @@ use GuzzleHttp\Client as GuzzleHttpClient;
 use Elasticsearch\ClientBuilder as ElasticsearchClientBuilder;
 use Predis\Client as PredisClient;
 use Stomp\Client as StompClient;
+use TonicHealthCheck\Incident\IncidentTypeResolver\IncidentType\IncidentTypeOptions;
+use TonicHealthCheck\Incident\IncidentTypeResolver\IncidentTypeResolver;
+use TonicHealthCheck\Incident\IncidentTypeResolver\IncidentTypeResolverInterface;
 use TonicHealthCheck\Incident\Siren\IncidentSiren;
 use TonicHealthCheck\Incident\Siren\IncidentSirenCollection;
 use TonicHealthCheck\Incident\Siren\NotificationType\EmailNotificationType;
@@ -256,16 +259,17 @@ return function ($container) {
         return $incidentHandler;
     };
 
-    $container['incident.checks_type_mapper'] = function (Container $c) {
-        $checksIncidentTypeMapper = new ChecksIncidentTypeMapper([]);
-
+    $container['incident.checks_type_resolver'] = function (Container $c) {
+        $checksIncidentTypeMapper = new IncidentTypeResolver(
+            $c['doctrine.em']
+        );
         return $checksIncidentTypeMapper;
     };
 
     $container['incident.manager'] = function (Container $c) {
         $incidentHandler = new IncidentManager(
             $c['doctrine.em'],
-            $c['incident.checks_type_mapper']
+            $c['incident.checks_type_resolver']
         );
 
         $c['dbs.event_manager.default']->addEventSubscriber($c['incident.eventsubscriber']);
@@ -610,8 +614,8 @@ return function ($container) {
 
     $container['checker.checks_list'] = function (Container $c) {
         $checksList = $c['checker.checks_list_link'];
-        /** @var ChecksIncidentTypeMapper $checksIncidentTypeMapper */
-        $checksIncidentTypeMapper = $c['incident.checks_type_mapper'];
+        /** @var IncidentTypeResolverInterface $checksIncidentTypeResolver */
+        $checksIncidentTypeResolver = $c['incident.checks_type_resolver'];
         foreach ($c['checker.checks_list_flags'] as $ident => $flag) {
             if (false === $flag) {
                 continue;
@@ -637,11 +641,21 @@ return function ($container) {
                                         if ($nodeChecks->getCheckIdent() === $checkName) {
                                             $checksList->add($nodeChecks);
 
-                                            if (is_array($checkFlag) && isset($checkFlag['incident_type'])) {
-                                                $checksIncidentTypeMapper->setChecksIncidentType(
-                                                    $nodeChecks->getIndent(),
-                                                    $checkFlag['incident_type']
-                                                );
+
+                                            if (is_array($checkFlag) && isset($checkFlag['incident_options'])) {
+                                                $checkOptions = $checkFlag['incident_options'];
+
+                                                $incidentTypeOptions = new IncidentTypeOptions($nodeChecks->getIndent(), $checkOptions['type']);
+
+                                                if(isset($checkOptions['occurrence'])&& isset($checkOptions['occurrence_period'])){
+                                                    $incidentTypeOptions->setOccurrence($checkOptions['occurrence']);
+                                                    $incidentTypeOptions->setOccurrencePeriod($checkOptions['occurrence_period']);
+                                                    if(isset($checkOptions['occurrence_info_type'])){
+                                                        $incidentTypeOptions->setInfoTypeToFire($checkOptions['occurrence_info_type']);
+                                                    }
+                                                }
+
+                                                $checksIncidentTypeResolver->registerChecksIncidentTypeOptions($incidentTypeOptions);
                                             }
                                         }
                                     }
