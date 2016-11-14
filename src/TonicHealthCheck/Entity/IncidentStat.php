@@ -4,7 +4,6 @@ namespace TonicHealthCheck\Entity;
 
 use DateTime;
 use DateTimeInterface;
-use diversen\file\string;
 
 /**
  * TonicHealthCheck\Entity\Incident;
