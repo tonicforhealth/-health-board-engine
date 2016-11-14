@@ -1,10 +1,11 @@
 <?php
 
-namespace TonicHealthCheck\tests\Integration\System;
+namespace TonicHealthCheck\Tests\Integration\System;
 
 use Doctrine\ORM\EntityManager;
 use Http\Client\Common\HttpMethodsClient;
 use Http\Discovery\MessageFactoryDiscovery;
+use PHPUnit_Extensions_Database_TestCase;
 use PHPUnit_Framework_TestCase;
 use Pimple\Container;
 use Psr\Http\Message\ResponseInterface;
@@ -20,6 +21,7 @@ use TonicHealthCheck\Entity\Component;
 use TonicHealthCheck\Entity\ComponentRepository;
 use TonicHealthCheck\Entity\Incident;
 use TonicHealthCheck\Entity\IncidentRepository;
+use TonicHealthCheck\Incident\IncidentInterface;
 use TonicHealthCheck\Incident\IncidentManager;
 use TonicHealthCheck\Maintenance\ScheduledMaintenance;
 use Http\Mock\Client as MockClient;
@@ -27,7 +29,7 @@ use Http\Mock\Client as MockClient;
 /**
  * Class AbstractInegration.
  */
-abstract class AbstractSystemTest extends PHPUnit_Framework_TestCase
+abstract class AbstractSystemTest extends PHPUnit_Extensions_Database_TestCase
 {
     const TEST_ENV = 'test';
 
@@ -45,6 +47,11 @@ abstract class AbstractSystemTest extends PHPUnit_Framework_TestCase
      * @var IncidentManager|\PHPUnit_Framework_MockObject_MockObject
      */
     protected $incidentManagerMock;
+
+    /**
+     * @var IncidentInterface|\PHPUnit_Framework_MockObject_MockObject
+     */
+    protected $incident;
 
     /**
      * @var Kernel
@@ -66,8 +73,9 @@ abstract class AbstractSystemTest extends PHPUnit_Framework_TestCase
      */
     public function setUp()
     {
-        parent::setUp();
         $this->getKernel()->boot();
+        parent::setUp();
+
 
         $this->inputInterface = $this->getMockBuilder(InputInterface::class)->getMock();
         $this->outputInterface = $this->getMockBuilder(OutputInterface::class)->getMock();
@@ -83,6 +91,42 @@ abstract class AbstractSystemTest extends PHPUnit_Framework_TestCase
         $this->getContainer()->offsetSet('component.manager', $this->getComponentManagerMock());
 
         $this->getContainer()->offsetSet('incident.manager', $this->getIncidentManagerMock());
+    }
+
+    /**
+     * Get the default connection for  PHPUnit_Extensions_Database_TestCase test
+     */
+    public function getConnection()
+    {
+        // Get an instance of your entity manager
+        $entityManager = $this->getContainer()['doctrine.em'];
+
+        // Retrieve PDO instance
+        $pdo = $entityManager->getConnection()->getWrappedConnection();
+
+        // Clear Doctrine to be safe
+        $entityManager->clear();
+
+        // Schema Tool to process our entities
+        $tool = new \Doctrine\ORM\Tools\SchemaTool($entityManager);
+        $classes = $entityManager->getMetaDataFactory()->getAllMetaData();
+
+        // Drop all classes and re-build them for each test case
+        $tool->dropSchema($classes);
+        $tool->createSchema($classes);
+
+        // Pass to PHPUnit
+        return $this->createDefaultDBConnection($pdo, 'test_db');
+    }
+
+    /**
+     * Returns the test dataset.
+     *
+     * @return PHPUnit_Extensions_Database_DataSet_IDataSet
+     */
+    protected function getDataSet()
+    {
+        return $this->createFlatXmlDataSet(__DIR__.'/fixtures/incident_stat.xml');
     }
 
     /**

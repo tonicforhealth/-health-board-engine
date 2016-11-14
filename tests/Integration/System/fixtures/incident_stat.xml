@@ -1,0 +1,12 @@
+<?xml version="1.0" ?>
+<dataset>
+    <incident_stat>
+        <column>id</column>
+        <column>incident_id</column>
+        <column>ident</column>
+        <column>create_at</column>
+        <column>message</column>
+        <column>status</column>
+        <column>resolved</column>
+    </incident_stat>
+</dataset>
