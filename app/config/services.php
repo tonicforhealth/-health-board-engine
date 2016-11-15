@@ -125,7 +125,7 @@ return function ($container) {
         return new EventManager();
     };
 
-    $container['dbs.event_manager'] = function (container $c) {
+    $container['dbs.event_manager'] = function (Container $c) {
         $eventManagers = [];
 
         foreach ($c['dbs'] as $key => $dbConfig) {

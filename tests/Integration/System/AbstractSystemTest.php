@@ -3,6 +3,7 @@
 namespace TonicHealthCheck\Tests\Integration\System;
 
 use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\Tools\SchemaTool;
 use Http\Client\Common\HttpMethodsClient;
 use Http\Discovery\MessageFactoryDiscovery;
 use PHPUnit_Extensions_Database_TestCase;
@@ -69,6 +70,11 @@ abstract class AbstractSystemTest extends PHPUnit_Extensions_Database_TestCase
     private $outputInterface;
 
     /**
+     * @var PHPUnit_Extensions_Database_DB_IDatabaseConnection
+     */
+    private $conn;
+
+    /**
      * Set up for AbstractHttpCheckTest.
      */
     public function setUp()
@@ -98,25 +104,26 @@ abstract class AbstractSystemTest extends PHPUnit_Extensions_Database_TestCase
      */
     public function getConnection()
     {
-        // Get an instance of your entity manager
-        $entityManager = $this->getContainer()['doctrine.em'];
+        if ($this->conn === null) {
+            // Get an instance of your entity manager
+            $entityManager = $this->getContainer()['doctrine.em'];
 
-        // Retrieve PDO instance
-        $pdo = $entityManager->getConnection()->getWrappedConnection();
+            // Retrieve PDO instance
+            $pdo = $entityManager->getConnection()->getWrappedConnection();
 
-        // Clear Doctrine to be safe
-        $entityManager->clear();
+            // Clear Doctrine to be safe
+            $entityManager->clear();
 
-        // Schema Tool to process our entities
-        $tool = new \Doctrine\ORM\Tools\SchemaTool($entityManager);
-        $classes = $entityManager->getMetaDataFactory()->getAllMetaData();
+            // Schema Tool to process our entities
+            $tool = new SchemaTool($entityManager);
+            $classes = $entityManager->getMetaDataFactory()->getAllMetaData();
 
-        // Drop all classes and re-build them for each test case
-        $tool->dropSchema($classes);
-        $tool->createSchema($classes);
+            $tool->createSchema($classes);
 
+            $this->conn = $this->createDefaultDBConnection($pdo, 'test_db');
+        }
         // Pass to PHPUnit
-        return $this->createDefaultDBConnection($pdo, 'test_db');
+        return $this->conn;
     }
 
     /**
@@ -126,7 +133,7 @@ abstract class AbstractSystemTest extends PHPUnit_Extensions_Database_TestCase
      */
     protected function getDataSet()
     {
-        return $this->createFlatXmlDataSet(__DIR__.'/fixtures/incident_stat.xml');
+        return $this->createFlatXmlDataSet(__DIR__.'/fixtures/start_data.xml');
     }
 
     /**
@@ -150,7 +157,7 @@ abstract class AbstractSystemTest extends PHPUnit_Extensions_Database_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|IncidentManager
+     * @return IncidentManager|\PHPUnit_Framework_MockObject_MockObject
      */
     protected function getIncidentManagerMock()
     {
@@ -195,26 +202,14 @@ abstract class AbstractSystemTest extends PHPUnit_Extensions_Database_TestCase
     protected function createIncidentManagerMock()
     {
 
-
-        $entityManager = static::getMockBuilder(EntityManager::class)
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $incidentRepository =  static::getMockBuilder(IncidentRepository::class)
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $incidentRepository
-            ->method('findOneBy')
-            ->willReturn($this->createIncident());
-
-        $entityManager->method('getRepository')->willReturn($incidentRepository);
+        // Get an instance of your entity manager
+        $entityManager = $this->getContainer()['doctrine.em'];
 
         $IncidentManagerMock = $this
             ->getMockBuilder(IncidentManager::class)
             ->setConstructorArgs([
                 $entityManager,
-                $this->getContainer()['incident.checks_type_resolver'],
+                $this->createChecksTypeResolverMock(),
 
             ])
             ->enableProxyingToOriginalMethods()
@@ -250,21 +245,13 @@ abstract class AbstractSystemTest extends PHPUnit_Extensions_Database_TestCase
             MessageFactoryDiscovery::find()
         );
 
-        $entityManagerMock = $this->getMockBuilder(EntityManager::class)->disableOriginalConstructor()->getMock();
-
-        $componentRepositoryMock = $this
-            ->getMockBuilder(ComponentRepository::class)
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $entityManagerMock
-            ->method('getRepository')
-            ->willReturn($componentRepositoryMock);
+        // Get an instance of your entity manager
+        $entityManager = $this->getContainer()['doctrine.em'];
 
         $componentManagerMock = $this
             ->getMockBuilder(ComponentManager::class)
             ->setConstructorArgs([
-                $entityManagerMock,
+                $entityManager,
                 $httpMethodsClient,
                 $this->getContainer()['rest.cachet.base_url'],
             ])
@@ -351,6 +338,25 @@ abstract class AbstractSystemTest extends PHPUnit_Extensions_Database_TestCase
     }
 
     /**
+     * @param string $indent
+     * @return null|CheckInterface
+     */
+    protected function findCheck($indent)
+    {
+        /** @var ChecksList $checkList */
+        $checkList = $this->getContainer()['checker.checks_list'];
+
+        /** @var CheckInterface $check */
+        foreach ($checkList as $index => $check) {
+            if ($indent === $check->getIndent()) {
+                return $check;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * @return array
      */
     protected function createComponentResponse()
@@ -394,5 +400,13 @@ abstract class AbstractSystemTest extends PHPUnit_Extensions_Database_TestCase
         $incident->setType('urgent');
 
         return $incident;
+    }
+
+    /**
+     * @return mixed
+     */
+    protected function createChecksTypeResolverMock()
+    {
+        return $this->getContainer()['incident.checks_type_resolver'];
     }
 }
