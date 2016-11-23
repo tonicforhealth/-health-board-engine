@@ -73,7 +73,6 @@ class DBBaseTableExistCheckTest extends AbstractIntegration
     {
         $pdo = $this
             ->getMockBuilder(PDOMock::class)
-            ->disableOriginalConstructor()
             ->getMock();
 
         $pdoStatement = $this->getMockBuilder(PDOStatement::class)->getMock();
