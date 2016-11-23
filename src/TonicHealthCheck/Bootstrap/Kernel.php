@@ -9,7 +9,7 @@ use Pimple\Container;
  */
 class Kernel
 {
-    const CONFIG_DEFAULT_PATH = __DIR__.'/../../../app/config/';
+    const CONFIG_DEFAULT_PATH = '/../../../app/config/';
     const CONFIG_FILE_TEMPLATE = '%sconfig%s.php';
     const PARAMETER_DEFAULT_FILE_TEMPLATE = '%sparameter%s.php';
     const SERVICES_DEFAULT_PATH = 'services.php';
@@ -84,7 +84,7 @@ class Kernel
         $this->setContainer(new \Pimple\Container());
         $this->getContainer()['config'] = $this->getConfig();
 
-        $servicesF = require self::CONFIG_DEFAULT_PATH.self::SERVICES_DEFAULT_PATH;
+        $servicesF = require __DIR__.self::CONFIG_DEFAULT_PATH.self::SERVICES_DEFAULT_PATH;
         $servicesF($this->getContainer());
     }
 
@@ -93,11 +93,11 @@ class Kernel
      */
     protected function initializeConfig()
     {
-        $configFile = sprintf(self::CONFIG_FILE_TEMPLATE, self::CONFIG_DEFAULT_PATH, $this->getConfigPrefix());
+        $configFile = sprintf(self::CONFIG_FILE_TEMPLATE, __DIR__.self::CONFIG_DEFAULT_PATH, $this->getConfigPrefix());
 
         $this->setConfig(require $configFile);
 
-        $parameterFile = sprintf(self::PARAMETER_DEFAULT_FILE_TEMPLATE, self::CONFIG_DEFAULT_PATH, $this->getConfigPrefix());
+        $parameterFile = sprintf(self::PARAMETER_DEFAULT_FILE_TEMPLATE, __DIR__.self::CONFIG_DEFAULT_PATH, $this->getConfigPrefix());
         if (is_readable($parameterFile)) {
             $parameter = require $parameterFile;
             $this->setConfig(array_replace_recursive($this->getConfig(), $parameter));
