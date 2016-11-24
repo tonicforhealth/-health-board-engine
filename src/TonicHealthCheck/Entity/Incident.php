@@ -61,7 +61,7 @@ class Incident implements IncidentInterface
      * @Expose
      * @Type("string")
      */
-    private $type = self::TYPE_URGENT;
+    private $type;
 
     /**
      * @Column(type="string", length=128)

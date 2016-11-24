@@ -135,7 +135,7 @@ class IncidentManager
         $incidentStat->setStatus($incident->getStatus());
         $incidentStat->setResolved($incident->isResolved());
         $this->getDoctrine()->persist($incidentStat);
-        $this->getDoctrine()->flush();
+        $this->getDoctrine()->flush($incidentStat);
 
         return $incidentStat;
     }
@@ -147,7 +147,9 @@ class IncidentManager
     protected function resolveIncidentType(Incident $incident, IncidentStat $incidentStat)
     {
         $incidentType = $this->getIncidentTypeResolver()->resolveChecksIncidentType($incident->getIdent());
-        $incident->setType($incidentType);
+        if ($incident->getType() != IncidentInterface::TYPE_URGENT) {
+            $incident->setType($incidentType);
+        }
         $incidentStat->setType($incidentType);
         $this->getDoctrine()->persist($incident);
         $this->getDoctrine()->persist($incidentStat);

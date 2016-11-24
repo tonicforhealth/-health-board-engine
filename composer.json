@@ -27,7 +27,7 @@
         "tonicforhealth/health-checker-check-email": "^0.1.5",
         "tonicforhealth/health-checker-check": "~0.1",
         "puli/composer-plugin": "dev-classmap as 1.0-beta10",
-        "tonicforhealth/health-checker-incident-component": "^0.2.2"
+        "tonicforhealth/health-checker-incident-component": "^0.3.0"
     },
     "require-dev": {
         "phpunit/phpunit": "^4.8",

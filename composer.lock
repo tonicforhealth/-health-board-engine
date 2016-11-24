@@ -4,8 +4,8 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "4740e078e91071f38b00e94c2f700670",
-    "content-hash": "71bb64cb3980ca3c557bfd183136868a",
+    "hash": "8e3aafeaf1ca21593e6310ce90b9ce97",
+    "content-hash": "1d00a39b61cf91cdb0fd2b024224cbb1",
     "packages": [
         {
             "name": "clue/stream-filter",
@@ -3153,16 +3153,16 @@
         },
         {
             "name": "tonicforhealth/health-checker-incident-component",
-            "version": "v0.2.2",
+            "version": "v0.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/tonicforhealth/health-checker-incident-component.git",
-                "reference": "78668ea078db35a68b086a9fd1022625aaa898a8"
+                "reference": "7da7c2743b33cbdfa0fcbc1b53bd623859970be7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/tonicforhealth/health-checker-incident-component/zipball/78668ea078db35a68b086a9fd1022625aaa898a8",
-                "reference": "78668ea078db35a68b086a9fd1022625aaa898a8",
+                "url": "https://api.github.com/repos/tonicforhealth/health-checker-incident-component/zipball/7da7c2743b33cbdfa0fcbc1b53bd623859970be7",
+                "reference": "7da7c2743b33cbdfa0fcbc1b53bd623859970be7",
                 "shasum": ""
             },
             "require": {
@@ -3207,7 +3207,7 @@
                 }
             ],
             "description": "Health checker incident component provides classes for health checker incident app",
-            "time": "2016-11-11 13:36:51"
+            "time": "2016-11-24 12:26:04"
         },
         {
             "name": "tonicforhealth/pagerduty-client",
